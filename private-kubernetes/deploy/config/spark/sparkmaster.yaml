@@ -1,0 +1,220 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sm-svc
+  labels:
+    app: sm-svc
+spec:
+  ports:
+  - port: 22
+    name: ssh
+  - port: 7077
+    name: rpc
+  - port: 7337
+    name: shuffleservice
+  - port: 8080
+    name: webui
+  - port: 8081
+    name: worker
+  - port: 18080
+    name: historyserver
+  - port: 5660
+    name: mfs1
+  - port: 5692
+    name: mfs2
+  - port: 5724
+    name: mfs3
+  - port: 5756
+    name: mfs4
+  clusterIP: None
+  selector:
+    app: sm
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: sm-pdb
+spec:
+  selector:
+    matchLabels:
+      app: sm
+  minAvailable: 1
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: sm
+spec:
+  serviceName: "sm-svc"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sm
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - sm
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: sm
+        imagePullPolicy: Always
+        image: docker.artifactory/maprtech/sparkmaster:5.2.2_3.0.1_centos7
+        securityContext:
+          privileged: true
+          capabilities:
+            add: ["SYS_ADMIN" , "NET_ADMIN", "NET_BROADCAST", "SYS_PACCT", "SYS_NICE", "SYS_RESOURCE", "SYS_RAWIO", "IPC_LOCK", "SYSLOG", "SYS_TIME"]
+        resources:
+          requests:
+            memory: "8Gi"
+            cpu: "500m"
+        ports:
+        - containerPort: 22
+          name: ssh
+        - containerPort: 7077
+          name: rpc
+        - containerPort: 7337
+          name: shuffleservice
+        - containerPort: 8080
+          name: webui
+        - containerPort: 8081
+          name: worker
+        - containerPort: 18080
+          name: historyserver
+        - containerPort: 5660
+          name: mfs1
+        - containerPort: 5692
+          name: mfs2
+        - containerPort: 5724
+          name: mfs3
+        - containerPort: 5756
+          name: mfs4
+        env:
+        - name: MAPR_SPARK_WORKERS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_SPARK_WORKERS
+        - name : MAPR_DISKS
+          value: "/dev/sde"
+        - name: MAPR_MEMORY
+          valueFrom:
+            resourceFieldRef:
+              containerName: sm
+              resource: requests.memory
+        - name: MAPR_CLUSTER
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_CLUSTER
+        - name: MAPR_CLDB_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_CLDB_HOSTS
+        - name: MAPR_ZK_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_ZK_HOSTS
+        - name: MAPR_HS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_HS_HOST
+        - name: MAPR_OT_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_OT_HOSTS
+        - name: MAPR_DB
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_DB
+        - name: MAPR_TZ
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_TZ
+        - name: MAPR_HOME
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_HOME
+        - name: MAPR_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_PORT
+        - name: MAPR_USER
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_USER
+        - name: MAPR_GROUP
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_GROUP
+        - name: MAPR_UID
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_UID
+        - name: MAPR_GID
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_GID
+        - name: MAPR_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_PASSWORD
+        - name: MAPR_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_ROOT_PASSWORD
+        command:
+        - /bin/bash
+        - -c
+        - exec /sbin/init
+        volumeMounts:
+        - mountPath: /run
+          name: run
+        - mountPath: /run/lock
+          name: runlock
+        - mountPath: /sys/fs/cgroup
+          name: cgroups
+          readOnly: true
+        - mountPath: /opt/mapr/logs
+          name: logs
+        - mountPath: /dev/sde
+          name: sde
+        - mountPath: /opt/mapr/conf/ssh
+          name: sshkeys
+      volumes:
+      - name: run
+        emptyDir: {}
+      - name: runlock
+        emptyDir: {}
+      - name: cgroups
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: logs
+        hostPath:
+          path: /root/logs/sparkm
+      - name: sde
+        hostPath:
+          path: /dev/sde
+      - name: sshkeys
+        secret:
+          secretName: ssh-key-secret

@@ -1,0 +1,30 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "apiVersion": {
+            "value": "2016-04-30-preview"
+        },
+        "name": {
+            "value": "md1"
+        },
+        "accountType": {
+            "value": "Premium_LRS"
+        },
+        "location": {
+            "value": "westus2"
+        },
+        "diskSizeGB": {
+            "value": "31"
+        },
+        "createOption": {
+            "value": "empty"
+        },
+        "sourceUri": {
+            "value": ""
+        },
+        "osType": {
+            "value": ""
+        }
+    }
+}

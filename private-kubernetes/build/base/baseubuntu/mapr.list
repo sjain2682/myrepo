@@ -1,0 +1,2 @@
+deb http://package.mapr.com/releases/v5.2.2/ubuntu binary trusty
+deb http://package.mapr.com/releases/MEP/MEP-3.0.1/ubuntu binary trusty

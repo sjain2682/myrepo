@@ -1,0 +1,17 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+   name: simple-maprfs
+   namespace: mapr-examples
+provisioner: mapr.com/maprfs
+reclaimPolicy: "Retain"
+parameters:
+    restServers: "10.10.108.153:30061"
+    cldbHosts: "10.244.1.6 10.244.2.77 10.244.3.73"
+    cluster: "my.cluster.com"
+    securityType: "unsecure"
+    maprSecretName: "mapr-provisioner-secrets"
+    maprSecretNamespace: "mapr-examples"
+    namePrefix: "pv"
+    mountPrefix: "/pv"
+    advisoryquota: "100M"

@@ -1,0 +1,202 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: zk-svc
+  labels:
+    app: zk-svc
+spec:
+  ports:
+  - name: lclient
+    port: 5181
+  - name: server
+    port: 2888
+  - name: leader-election
+    port: 3888
+  clusterIP: None
+  selector:
+    app: zk
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zk-cm
+data:
+  jvm.heap: "1G"
+  tick: "2000"
+  init: "10"
+  sync: "5"
+  client.cnxns: "60"
+  snap.retain: "3"
+  purge.interval: "0"
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: zk-pdb
+spec:
+  selector:
+    matchLabels:
+      app: zk
+  minAvailable: 1
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: zk
+spec:
+  serviceName: "zk-svc"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: zk
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - zk
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: zk
+        imagePullPolicy: Always
+        image: docker.artifactory/maprtech/zk:5.2.2_3.0.1_centos7
+        securityContext:
+          capabilities:
+            add: ["SYS_ADMIN" , "NET_ADMIN", "NET_BROADCAST", "SYS_PACCT", "SYS_NICE", "SYS_RESOURCE", "SYS_RAWIO", "IPC_LOCK", "SYSLOG", "SYS_TIME"]
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: leader-election
+        env:
+        - name: MAPR_MEMORY
+          valueFrom:
+            resourceFieldRef:
+              containerName: zk
+              resource: requests.memory
+        - name: MAPR_CLUSTER
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_CLUSTER
+        - name: MAPR_CLDB_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_CLDB_HOSTS
+        - name: MAPR_ZK_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_ZK_HOSTS
+        - name: MAPR_HS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_HS_HOST
+        - name: MAPR_OT_HOSTS
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_OT_HOSTS
+        - name: MAPR_DB
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_DB
+        - name: MAPR_TZ
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_TZ
+        - name: MAPR_HOME
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_HOME
+        - name: MAPR_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: mapr-cluster-configmap
+              key: MAPR_PORT
+        - name: MAPR_USER
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_USER
+        - name: MAPR_GROUP
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_GROUP
+        - name: MAPR_UID
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_UID
+        - name: MAPR_GID
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_GID
+        - name: MAPR_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_PASSWORD
+        - name: MAPR_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mapr-user-secrets
+              key: MAPR_ROOT_PASSWORD
+        command:
+        - /bin/bash
+        - -c
+        - exec /sbin/init
+        livenessProbe:
+          exec:
+            command:
+            - "/opt/mapr/server/zkOk.sh"
+          initialDelaySeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - mountPath: /run
+          name: run
+        - mountPath: /run/lock
+          name: runlock
+        - mountPath: /sys/fs/cgroup
+          name: cgroups
+          readOnly: true
+        - mountPath: /opt/mapr/logs
+          name: logs
+        - mountPath: /opt/mapr/zookeeper/zookeeper-3.4.5/logs/
+          name: zklogs
+        - mountPath: /opt/mapr/zkdata
+          name: zkdata
+      volumes:
+      - name: run
+        emptyDir: {}
+      - name: runlock
+        emptyDir: {}
+      - name: cgroups
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: logs
+        hostPath:
+          path: /root/logs/zk
+      - name: zklogs
+        hostPath:
+          path: /root/logs/zk
+      - name: zkdata
+        emptyDir: {}

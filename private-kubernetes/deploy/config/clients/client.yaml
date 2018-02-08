@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pacc-kube
+spec:
+  containers:
+  - name: pacc-kube
+    imagePullPolicy: Always
+    image: docker.artifactory/maprtech/pacc-kube:5.2.2_3.0.1_centos7
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "500m"
+    env:
+    - name: MAPR_MEMORY
+      valueFrom:
+        resourceFieldRef:
+          containerName: pacc-kube
+          resource: requests.memory
+    - name: MAPR_CLUSTER
+      valueFrom:
+        configMapKeyRef:
+          name: mapr-cluster-configmap
+          key: MAPR_CLUSTER
+    - name: MAPR_CLDB_HOSTS
+      valueFrom:
+        configMapKeyRef:
+          name: mapr-cluster-configmap
+          key: MAPR_CLDB_HOSTS
+    - name: MAPR_TZ
+      valueFrom:
+        configMapKeyRef:
+          name: mapr-cluster-configmap
+          key: MAPR_TZ
+    - name: MAPR_HOME
+      valueFrom:
+        configMapKeyRef:
+          name: mapr-cluster-configmap
+          key: MAPR_HOME
+    - name: MAPR_CONTAINER_USER
+      valueFrom:
+        secretKeyRef:
+          name: mapr-user-secrets
+          key: MAPR_USER
+    - name: MAPR_CONTAINER_GROUP
+      valueFrom:
+        secretKeyRef:
+          name: mapr-user-secrets
+          key: MAPR_GROUP
+    - name: MAPR_CONTAINER_UID
+      valueFrom:
+        secretKeyRef:
+            name: mapr-user-secrets
+            key: MAPR_UID
+    - name: MAPR_CONTAINER_GID
+      valueFrom:
+        secretKeyRef:
+          name: mapr-user-secrets
+          key: MAPR_GID
+    - name: MAPR_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mapr-user-secrets
+          key: MAPR_PASSWORD
+    - name: MAPR_ROOT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mapr-user-secrets
+          key: MAPR_ROOT_PASSWORD
+    command:
+    - /bin/bash
+    - -c
+    - exec /sbin/init

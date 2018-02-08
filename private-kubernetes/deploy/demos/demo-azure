@@ -1,0 +1,19 @@
+#!/bin/sh
+
+cd ../config/azure
+START=`date +%s`
+#kubectl config use-context DEMO
+kubectl --namespace="mapr-demo" create -f maprclusterconfigmap.yaml
+kubectl --namespace="mapr-demo" create -f maprusersecrets.yaml
+#kubectl create secret generic mapr-ssh-key --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+#kubectl create secret generic mapr-cluster --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+kubectl --namespace="mapr-demo" create -f azurezk.yaml
+sleep 30
+kubectl --namespace="mapr-demo" create -f azurecldb.yaml
+sleep 60
+kubectl --namespace="mapr-demo" create -f azuremfs.yaml
+kubectl --namespace="mapr-demo" create -f azureweb.yaml
+sleep 20
+FINISH=`date +%s`
+ELAPSED_TIME=$(($FINISH - $START))
+echo "It took $ELAPSED_TIME seconds to bring up this cluster..."

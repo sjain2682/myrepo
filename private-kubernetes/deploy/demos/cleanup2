@@ -1,0 +1,11 @@
+#!/bin/sh
+
+cd ../config/spark
+cd ../core2
+kubectl --namespace="mapr-demo2" delete -f web2.yaml &
+kubectl --namespace="mapr-demo2" delete -f cldb2.yaml &
+kubectl --namespace="mapr-demo2" delete -f zk2.yaml &
+#kubectl create secret generic mapr-cluster --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+#kubectl create secret generic mapr-ssh-key --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+kubectl --namespace="mapr-demo2" delete -f maprusersecrets2.yaml &
+kubectl --namespace="mapr-demo2" delete -f maprclusterconfigmap2.yaml &

@@ -1,0 +1,18 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+   name: secure-maprfs
+   namespace: mapr-examples
+provisioner: mapr.com/maprfs
+parameters:
+    restServers: "10.10.102.96"
+    cluster: "cluster2"
+    cldbHosts: "10.10.102.96"
+    securityType: "secure"
+    ticketSecretName: "mapr-ticket-secret"
+    ticketSecretNamespace: "mapr-example"
+    maprSecretName: "mapr-provisioner-secrets"
+    maprSecretNamespace: "mapr-examples"
+    namePrefix: "pv"
+    mountPrefix: "/pv"
+    advisoryquota: "100M"

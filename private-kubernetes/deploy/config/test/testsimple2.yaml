@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-simple2
+  namespace: mapr-examples
+spec:
+  containers:
+  - name: base
+    imagePullPolicy: Always
+    image: docker.artifactory/maprtech/simpleclient:1.00
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "500m"
+    command:
+    - bash
+    - -c
+    - /start.sh
+    volumeMounts:
+    - mountPath: /mapr
+      name: maprflex
+  volumes:
+    - name: maprflex
+      flexVolume:
+        driver: "mapr.com/maprfs"
+        options:
+          volumePath: "/"
+          cluster: "my.cluster.com"
+          cldbHosts: "10.244.1.6 10.244.2.77 10.244.3.73"
+          securityType: "unsecure"

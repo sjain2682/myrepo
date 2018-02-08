@@ -1,0 +1,18 @@
+#!/bin/sh
+
+cd ../config/core2
+START=`date +%s`
+kubectl --namespace="mapr-demo2" create -f maprclusterconfigmap2.yaml
+kubectl --namespace="mapr-demo2" create -f maprusersecrets2.yaml
+#kubectl create secret generic mapr-ssh-key --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+#kubectl create secret generic mapr-cluster --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+kubectl --namespace="mapr-demo2" create -f zk2.yaml
+sleep 30
+kubectl --namespace="mapr-demo2" create -f cldb2.yaml
+sleep 60
+#kubectl create -f mfs.yaml
+kubectl --namespace="mapr-demo2" create -f web2.yaml
+sleep 20
+FINISH=`date +%s`
+ELAPSED_TIME=$(($FINISH - $START))
+echo "It took $ELAPSED_TIME seconds to bring up this cluster..."

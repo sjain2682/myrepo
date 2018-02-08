@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-simplepv-test2
+  namespace: mapr-examples
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  flexVolume:
+    driver: "mapr.com/maprfs"
+    options:
+      volumePath: "/"
+      cluster: "my.cluster.com"
+      cldbHosts: "10.244.1.6 10.244.2.77 10.244.3.73"
+      securityType: "unsecure"

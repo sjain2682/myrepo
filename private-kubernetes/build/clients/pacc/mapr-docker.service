@@ -1,0 +1,9 @@
+[Unit]
+Description=Simple service that launches Mapr startup script for container.
+
+[Service]
+Type=oneshot
+ExecStart=/opt/mapr/server/start.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,27 @@
+#!/bin/sh
+
+cd ../config/spark
+kubectl --namespace="mapr-demo" delete -f sparkmaster.yaml &
+kubectl --namespace="mapr-demo" delete -f spark.yaml &
+cd ../clients
+kubectl --namespace="mapr-demo" delete -f pacc.yaml &
+cd ../plugin
+kubectl --namespace="mapr-demo" delete -f maprfs-VolumeProvisioner.yaml &
+kubectl --namespace="mapr-demo" delete -f maprfs-VolumePlugin.yaml &
+cd ../core
+kubectl --namespace="mapr-demo" delete -f web.yaml &
+kubectl --namespace="mapr-demo" delete -f mfs.yaml &
+kubectl --namespace="mapr-demo" delete -f cldb.yaml &
+kubectl --namespace="mapr-demo" delete -f zk.yaml &
+#kubectl create secret generic mapr-cluster --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+#kubectl create secret generic mapr-ssh-key --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+kubectl --namespace="mapr-demo" delete -f maprusersecrets.yaml &
+kubectl --namespace="mapr-demo" delete -f maprclusterconfigmap.yaml &
+cd ../core2
+kubectl --namespace="mapr-demo2" delete -f web2.yaml &
+kubectl --namespace="mapr-demo2" delete -f cldb2.yaml &
+kubectl --namespace="mapr-demo2" delete -f zk2.yaml &
+#kubectl create secret generic mapr-cluster --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+#kubectl create secret generic mapr-ssh-key --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+kubectl --namespace="mapr-demo2" delete -f maprusersecrets2.yaml &
+kubectl --namespace="mapr-demo2" delete -f maprclusterconfigmap2.yaml &

@@ -1,0 +1,22 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: test-secure-provisioner
+  namespace: mapr-examples
+spec:
+  containers:
+  - name: test-maprfs
+    imagePullPolicy: Always
+    image: docker.artifactory/maprtech/simpleclient:1.00
+    command:
+    - bash
+    - -c
+    - /start.sh
+    volumeMounts:
+      - name: maprfs-pvc
+        mountPath: "/dynvolume"
+  restartPolicy: "Never"
+  volumes:
+    - name: maprfs-pvc
+      persistentVolumeClaim:
+        claimName: maprfs-secure-pvc

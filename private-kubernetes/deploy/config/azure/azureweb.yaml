@@ -1,0 +1,195 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-svc
+  labels:
+    app: web-svc
+spec:
+  ports:
+  - protocol: TCP
+    name: http
+    port: 8443
+    targetPort: 8443
+  type: LoadBalancer
+  selector:
+    app: web
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: web-pdb
+spec:
+  selector:
+    matchLabels:
+      app: web
+  minAvailable: 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-cm
+data:
+  web.conf: |
+    web.host: 0.0.0.0
+    mapr.headerbuffer.size: 16384
+    mapr.webui.timeout: 1800
+    mapr.webui.https.port: 8443
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: web
+spec:
+  serviceName: "web-svc"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - web
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: web
+          imagePullPolicy: Always
+          image: maprhack1.azurecr.io/maprtech/web:5.2.2_3.0.1_centos7
+          securityContext:
+            capabilities:
+              add: ["SYS_ADMIN" , "NET_ADMIN", "NET_BROADCAST", "SYS_PACCT", "SYS_NICE", "SYS_RESOURCE", "SYS_RAWIO", "IPC_LOCK", "SYSLOG", "SYS_TIME"]
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+          ports:
+          - containerPort: 8443
+            name: http
+          env:
+          - name: MAPR_LICENSE_URL
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_LICENSE_URL
+          - name: MAPR_MEMORY
+            valueFrom:
+              resourceFieldRef:
+                containerName: web
+                resource: requests.memory
+          - name: MAPR_CLUSTER
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_CLUSTER
+          - name: MAPR_CLDB_HOSTS
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_CLDB_HOSTS
+          - name: MAPR_ZK_HOSTS
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_ZK_HOSTS
+          - name: MAPR_HS_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_HS_HOST
+          - name: MAPR_OT_HOSTS
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_OT_HOSTS
+          - name: MAPR_DB
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_DB
+          - name: MAPR_TZ
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_TZ
+          - name: MAPR_HOME
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_HOME
+          - name: MAPR_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_PORT
+          - name: MAPR_USER
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_USER
+          - name: MAPR_GROUP
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_GROUP
+          - name: MAPR_UID
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_UID
+          - name: MAPR_GID
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_GID
+          - name: MAPR_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_PASSWORD
+          - name: MAPR_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_ROOT_PASSWORD
+          command:
+          - /bin/bash
+          - -c
+          - exec /sbin/init
+          livenessProbe:
+            exec:
+              command:
+              - "/opt/mapr/server/webOk.sh"
+            initialDelaySeconds: 600
+            timeoutSeconds: 5
+          volumeMounts:
+          - mountPath: /run
+            name: run
+          - mountPath: /run/lock
+            name: runlock
+          - mountPath: /sys/fs/cgroup
+            name: cgroups
+            readOnly: true
+          - mountPath: /opt/mapr/logs
+            name: logs
+          - mountPath: /opt/mapr/mapr-cli-audit-log/
+            name: auditlogs
+      volumes:
+      - name: run
+        emptyDir: {}
+      - name: runlock
+        emptyDir: {}
+      - name: cgroups
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: logs
+        hostPath:
+          path: /root/logs/web
+      - name: auditlogs
+        hostPath:
+          path: /root/logs/web

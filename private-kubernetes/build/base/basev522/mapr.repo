@@ -1,0 +1,13 @@
+[MapR_Core]
+name = MapR Core Components
+enabled = 1
+baseurl = http://package.mapr.com/releases/v5.2.2/redhat
+protected = 1
+gpgcheck = 1
+
+[MapR_Ecosystem]
+name=MapR Ecosystem Components
+baseurl=http://package.mapr.com/releases/MEP/MEP-3.0.1/redhat
+gpgcheck=1
+enabled=1
+protected=1

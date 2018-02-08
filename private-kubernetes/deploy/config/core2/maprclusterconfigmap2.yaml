@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mapr-cluster-configmap
+data:
+  MAPR_CLUSTER: "second.cluster.com"
+  MAPR_CLDB_HOSTS: "cldb-0.cldb-svc.mapr-demo2.svc.cluster.local,cldb-1.cldb-svc.mapr-demo2.svc.cluster.local"
+  MAPR_ZK_HOSTS: "zk-0.zk-svc.mapr-demo2.svc.cluster.local,zk-1.zk-svc.mapr-demo2.svc.cluster.local,zk-2.zk-svc.mapr-demo2.svc.cluster.local"
+  MAPR_SPARK_WORKERS: "spark-0.spark-svc.mapr-demo2.svc.cluster.local,spark-1.spark-svc.mapr-demo2.svc.cluster.local,spark-2.spark-svc.mapr-demo2.svc.cluster.local"
+  MAPR_HS_HOST: ""
+  MAPR_OT_HOSTS: ""
+  MAPR_DB: "true"
+  MAPR_SINGLE_CLDB: "false"
+  MAPR_LICENSE_URL: "http://ec2-54-161-85-25.compute-1.amazonaws.com:8080/licensegenerator/api/license?customerid=Mapr&downloadid=&issuer=&Email=&type=m5&partnerName=&numnodes=3&numdays=731&modules=hadoop,database,streams&clusterid="
+  MAPR_TZ: "UTC"
+  MAPR_HOME: "/opt/mapr"
+  MAPR_PORT: "9443"

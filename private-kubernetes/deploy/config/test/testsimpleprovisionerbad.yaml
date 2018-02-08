@@ -1,0 +1,41 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: test-badprovisioner
+  namespace: mapr-examples
+spec:
+  containers:
+  - name: base
+    imagePullPolicy: Always
+    image: docker.artifactory/maprtech/simpleclient:1.00
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "500m"
+    command:
+    - bash
+    - -c
+    - /start.sh
+    volumeMounts:
+      - name: maprfs-pvc-bad
+        mountPath: "/mapr"
+  restartPolicy: "Never"
+  volumes:
+    - name: maprfs-pvc-bad
+      persistentVolumeClaim:
+        claimName: maprfs-pvc-bad
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: maprfs-pvc-bad
+  namespace: mapr-examples
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "bad-simple-maprfs"
+spec:
+  accessModes:
+    - ReadWriteOnce
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 300M

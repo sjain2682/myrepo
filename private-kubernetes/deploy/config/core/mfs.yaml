@@ -1,0 +1,195 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mfs-svc
+  labels:
+    app: mfs-svc
+spec:
+  ports:
+  - port: 5660
+    name: mfs1
+  - port: 5692
+    name: mfs2
+  - port: 5724
+    name: mfs3
+  - port: 5756
+    name: mfs4
+  clusterIP: None
+  selector:
+    app: mfs
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: mfs-pdb
+spec:
+  selector:
+    matchLabels:
+      app: mfs
+  minAvailable: 1
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mfs-cm
+data:
+  mfs.conf: |
+    mfs.server.port: 5660
+    mfs.numrpcthreads: 2
+---
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  name: mfs
+spec:
+  serviceName: "mfs-svc"
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: mfs
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: "app"
+                operator: In
+                values:
+                - mfs
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: mfs
+          imagePullPolicy: Always
+          image: docker.artifactory/maprtech/mfs:5.2.2_3.0.1_centos7
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN" , "NET_ADMIN", "NET_BROADCAST", "SYS_PACCT", "SYS_NICE", "SYS_RESOURCE", "SYS_RAWIO", "IPC_LOCK", "SYSLOG", "SYS_TIME"]
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "500m"
+          ports:
+          - containerPort: 5660
+            name: mfs1
+          - containerPort: 5692
+            name: mfs2
+          - containerPort: 5724
+            name: mfs3
+          - containerPort: 5756
+            name: mfs4
+          env:
+          - name : MAPR_DISKS
+            value: "/dev/sdd"
+          - name: MAPR_MEMORY
+            valueFrom:
+              resourceFieldRef:
+                containerName: mfs
+                resource: requests.memory
+          - name: MAPR_CLUSTER
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_CLUSTER
+          - name: MAPR_CLDB_HOSTS
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_CLDB_HOSTS
+          - name: MAPR_ZK_HOSTS
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_ZK_HOSTS
+          - name: MAPR_HS_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_HS_HOST
+          - name: MAPR_OT_HOSTS
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_OT_HOSTS
+          - name: MAPR_DB
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_DB
+          - name: MAPR_TZ
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_TZ
+          - name: MAPR_HOME
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_HOME
+          - name: MAPR_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: mapr-cluster-configmap
+                key: MAPR_PORT
+          - name: MAPR_USER
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_USER
+          - name: MAPR_GROUP
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_GROUP
+          - name: MAPR_UID
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_UID
+          - name: MAPR_GID
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_GID
+          - name: MAPR_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_PASSWORD
+          - name: MAPR_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mapr-user-secrets
+                key: MAPR_ROOT_PASSWORD
+          command:
+          - /bin/bash
+          - -c
+          - exec /sbin/init
+          volumeMounts:
+          - mountPath: /run
+            name: run
+          - mountPath: /run/lock
+            name: runlock
+          - mountPath: /sys/fs/cgroup
+            name: cgroups
+            readOnly: true
+          - mountPath: /opt/mapr/logs
+            name: logs
+          - mountPath: /dev/sdd
+            name: sdd
+      volumes:
+      - name: run
+        emptyDir: {}
+      - name: runlock
+        emptyDir: {}
+      - name: cgroups
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: logs
+        hostPath:
+          path: /root/logs/mfs
+      - name: sdd
+        hostPath:
+          path: /dev/sdd

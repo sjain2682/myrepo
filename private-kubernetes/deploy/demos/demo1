@@ -1,0 +1,22 @@
+#!/bin/sh
+
+cd ../config/core
+START=`date +%s`
+#kubectl config use-context DEMO
+kubectl --namespace="mapr-demo" create -f maprclusterconfigmap.yaml
+kubectl --namespace="mapr-demo" create -f maprusersecrets.yaml
+#kubectl create secret generic mapr-ssh-key --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+#kubectl create secret generic mapr-cluster --from-file=ssh-privatekey=id_rsa --from-file=ssh-publickey=id_rsa.pub
+kubectl --namespace="mapr-demo" create -f zk.yaml
+sleep 60
+kubectl --namespace="mapr-demo" create -f cldb.yaml
+sleep 75
+kubectl --namespace="mapr-demo" create -f mfs.yaml
+kubectl --namespace="mapr-demo" create -f web.yaml
+cd ../plugin
+sleep 30
+kubectl --namespace="mapr-demo" create -f maprfs-VolumePlugin.yaml
+kubectl --namespace="mapr-demo" create -f maprfs-VolumeProvisioner.yaml
+FINISH=`date +%s`
+ELAPSED_TIME=$(($FINISH - $START))
+echo "It took $ELAPSED_TIME seconds to bring up this cluster..."

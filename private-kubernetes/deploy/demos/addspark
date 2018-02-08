@@ -1,0 +1,13 @@
+#!/bin/sh
+
+cd ../config/spark
+START=`date +%s`
+kubectl --namespace="mapr-demo" create -f spark.yaml
+cd ../clients
+kubectl --namespace="mapr-demo" create -f pacc.yaml
+sleep 15
+cd ../spark
+kubectl --namespace="mapr-demo" create -f sparkmaster.yaml
+FINISH=`date +%s`
+ELAPSED_TIME=$(($FINISH - $START))
+echo "It took $ELAPSED_TIME seconds to add 5 new nodes to this cluster..."

@@ -1,0 +1,103 @@
+#!/bin/sh
+
+ECHOE="echo -e"
+NO=0
+YES=1
+INFO=0
+WARN=-1
+ERROR=1
+MAPR_DB=$YES
+MAPR_HOME=${MAPR_HOME:-/opt/mapr}
+MEM_FILE="$MAPR_HOME/conf/container_meminfofake"
+MEM_TOTAL=6291456
+SECURE_CLUSTER=$NO
+
+tput init
+
+# Output an error, warning or regular message
+msg() {
+    msg_format "$1" $2
+}
+
+msg_err() {
+    tput bold
+    msg_format "\nERROR: $1"
+    tput sgr0
+    exit $ERROR
+}
+
+# Print each word according to the screen size
+msg_format() {
+      local length=0
+      local width=$(tput cols)
+      local words=$1
+
+      width=${width:-80}
+      for word in $words; do
+          length=$(($length + ${#word} + 1))
+          if [ $length -gt $width ]; then
+              $ECHOE "\n$word \c"
+              length=$((${#word} + 1))
+          else
+              $ECHOE "$word \c"
+          fi
+      done
+      [ -z "$2" ] && $ECHOE "\n"
+}
+
+msg_warn() {
+    tput bold
+    msg_format "\nWARNING: $1"
+    tput sgr0
+    sleep 2
+}
+
+success() {
+    local s="...Success"
+
+    [ "$1" = "$YES" ] && s="\n$s"
+    [ -n "$2" ] && s="$s - $2"
+    msg "$s"
+}
+
+set_license() {
+    ID=`maprcli license showid -noheader`
+    PARAMS="${ID}"
+    MAPR_LICENSE_URL="$MAPR_LICENSE_URL$PARAMS"
+    msg "MAPR_LICENSE_URL = $MAPR_LICENSE_URL"
+    wget --no-check-certificate -O /tmp/license.txt $MAPR_LICENSE_URL
+    maprcli license add -is_file true -license /tmp/license.txt
+    success $YES
+}
+
+wait_for_cldb() {
+    #Make sure CLDB is up before we continue...
+    COUNTER=0
+    STEPCOUNTER=5
+    until [  $COUNTER -gt 600 ]; do
+        maprcli node list
+        if [ $? -eq 0 ]; then
+            COUNTER=605
+        else
+            sleep $STEPCOUNTER
+            COUNTER=$(($COUNTER + 5))
+            STEPCOUNTER=$(($STEPCOUNTER + $STEPCOUNTER))
+        fi
+    done
+}
+
+. /opt/mapr/conf/basestart.sh
+msg "=== Waiting for CLDB ==="
+wait_for_cldb
+msg "=== Starting Webserver ==="
+/opt/mapr/adminuiapp/webserver start
+msg "=== Getting license ==="
+set_license
+msg "=== Environment Tests ==="
+msg "Container network info"
+hostname
+hostname -I
+msg "/conf/mapr-clusters.conf"
+cat /opt/mapr/conf/mapr-clusters.conf
+msg "=== Sleeping forever to keep container up ==="
+sleep infinity

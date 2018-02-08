@@ -1,0 +1,79 @@
+FROM golang:latest
+RUN apt-get update; \
+    apt-get install golang-glide
+COPY maprfs/github.com /go/src/github.com
+COPY maprfs/vendor /go/src/maprfs/vendor
+COPY maprfs/glide.yaml /go/src/maprfs/glide.yaml
+COPY maprfs/glide.lock /go/src/maprfs/glide.lock
+COPY maprfs/main.go /go/src/maprfs/main.go
+WORKDIR /go/src/maprfs
+#RUN glide install -v
+RUN go build
+
+FROM centos:centos7
+LABEL mapr.os=centos7
+ENV container docker
+# Add service since we are using systemd
+COPY mapr-docker.service /etc/systemd/system/mapr-docker.service
+# Setup systemd
+# Don't start any optional services except for the few we need.
+RUN find /etc/systemd/system \
+         /lib/systemd/system \
+         -path '*.wants/*' \
+         -not -name '*journald*' \
+         -not -name '*systemd-tmpfiles*' \
+         -not -name '*systemd-user-sessions*' \
+         -exec rm \{} \;
+RUN systemctl set-default multi-user.target
+# Fix zombie problems with pid 1
+STOPSIGNAL SIGRTMIN+3
+# Add Mapr Repo file for Yum
+COPY mapr.repo /etc/yum.repos.d/mapr.repo
+# Setup repos and dl prereqs + Mapr Core
+RUN rpm --import http://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7; \
+    rpm --import https://www.centos.org/keys/RPM-GPG-KEY-CentOS-7; \
+    rpm --import http://package.qa.lab/releases/pub/maprgpg.key; \
+    rpm --import http://package.qa.lab/releases/pub/gnugpg.key; \
+    yum -y update && yum -y clean all; \
+    yum -y install epel-release; \
+    sed -i 's/^mirror/#mirror/g' /etc/yum.repos.d/epel.repo; \
+    sed -i 's/^#base/base/g' /etc/yum.repos.d/epel.repo; \
+    yum install -y java-1.8.0-openjdk-devel mapr-posix-client-basic mapr-posix-client-platinum; \
+    systemctl enable mapr-docker.service; \
+    systemctl disable mapr-posix-client-basic; \
+    systemctl disable mapr-posix-client-platinum; \
+    mkdir -p /tmp/lib; \
+    cp -r /opt/mapr/lib/libfuse.* /tmp/lib; \
+    cp -r /opt/mapr/lib/libMapRClient_c.* /tmp/lib; \
+    cp -r /opt/mapr/lib/libMapRClient.* /tmp/lib; \
+    rm -rf /opt/mapr/contrib; \
+    rm -rf /opt/mapr/conf.new; \
+    rm -rf /opt/mapr/examples; \
+    rm -rf /opt/mapr/hadoop; \
+    rm -rf /opt/mapr/initscripts; \
+    rm -rf /opt/mapr/include; \
+    rm -rf /opt/mapr/libexp; \
+    rm -rf /opt/mapr/lib; \
+    rm -rf /opt/mapr/logs; \
+    rm -rf /opt/mapr/pid; \
+    rm -rf /opt/mapr/server; \
+    mkdir -p /opt/mapr/lib; \
+    cp -r /tmp/lib/* /opt/mapr/lib; \
+    rm -rf /tmp
+# Copy script files
+COPY copy-plugin.sh /opt/mapr/plugin/driver/copy-plugin.sh
+COPY jvm.sh /opt/mapr/plugin/driver/jvm.sh
+COPY start-fuse.sh /opt/mapr/plugin/driver/start-fuse.sh
+COPY pre-stop.sh /opt/mapr/plugin/driver/pre-stop.sh
+# Build GO code
+COPY --from=0 /go/src/maprfs/maprfs /opt/mapr/plugin/driver/maprfs
+RUN chmod +x /opt/mapr/plugin/driver/copy-plugin.sh; \
+    chmod +x /opt/mapr/plugin/driver/jvm.sh; \
+    chmod +x /opt/mapr/plugin/driver/pre-stop.sh; \
+    chmod +x /opt/mapr/plugin/driver/start-fuse.sh; \
+    chmod +x /opt/mapr/plugin/driver/maprfs; \
+    touch /opt/mapr/plugin/driver/RELEASE; \
+    ts=`stat -c %Y /opt/mapr/plugin/driver/RELEASE`; \
+    echo "$ts" > /opt/mapr/plugin/driver/RELEASE
+WORKDIR /opt/mapr/plugin/
+CMD ["/bin/bash"]
